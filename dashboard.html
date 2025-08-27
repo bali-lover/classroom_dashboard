@@ -1,0 +1,3787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학습 진도판 관리 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            overflow-x: hidden;
+            zoom: 0.8;
+        }
+
+        /* 헤더 스타일 */
+        .header {
+            background-color: white;
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0 0 4px 0;
+            font-size: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+
+        .header h1::before {
+            content: "📊";
+            margin-right: 10px;
+            font-size: 24px;
+        }
+
+        .header-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            margin: 3px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-info {
+            background: #06b6d4;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* 메인 컨테이너 */
+        .main-container {
+            display: flex;
+            padding: 12px;
+            gap: 15px;
+            height: calc(100vh - 65px);
+        }
+
+        /* 좌측 진행상황 영역 */
+        .progress-section {
+            flex: 2;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            min-height: 780px;
+        }
+
+        /* 탭 버튼 */
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            border-radius: 0;
+            font-size: 24px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            background: transparent;
+            color: #047857;
+            border-bottom: 3px solid #047857;
+            font-weight: 600;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #374151;
+            background: rgba(0,0,0,0.05);
+        }
+
+        /* 개별 모드 그리드 (7x5 = 35명) */
+        .individual-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        /* 조별 모드 그리드 (2x4 = 8개 조) */
+        .group-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 10px 0;
+        }
+
+        .group-grid .student-card {
+            height: 280px;
+        }
+
+        /* 학생/조 카드 */
+        .student-card {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            height: 108px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .student-card.inactive {
+            background: #f9fafb;
+            border-color: #d1d5db;
+            color: #9ca3af;
+        }
+
+        .student-card.inactive::after {
+            content: "미사용";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .student-card:not(.inactive):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+
+        /* 진행률에 따른 단일 색상 진행 (청록색 계열) */
+        .student-card.progress-0 { 
+            background: #f8fafc; 
+            color: #000 !important; 
+        }
+        .student-card.progress-20 { 
+            background: #f0fdfa; 
+            color: #000 !important; 
+        }
+        .student-card.progress-40 { 
+            background: #ccfbf1; 
+            color: #000 !important; 
+        }
+        .student-card.progress-60 { 
+            background: #99f6e4; 
+            color: #000 !important; 
+        }
+        .student-card.progress-80 { 
+            background: #5eead4; 
+            color: #000 !important; 
+        }
+        .student-card.progress-100 { 
+            background: #2dd4bf; 
+            color: #000 !important; 
+        }
+
+        /* 접속 상태에 따른 테두리 색상 */
+        .student-card.connected { 
+            border-color: #6b7280; 
+            border-width: 3px;
+        }
+        
+        .student-card:not(.connected) { 
+            border-color: #d1d5db; 
+        }
+
+        
+        /* 도움 요청 스타일 */
+        .student-card.help-needed {
+            border-color: #ef4444;
+            border-width: 3px;
+            animation: pulse-red 2s infinite;
+        }
+
+        
+        @keyframes pulse-red {
+            0%, 100% { border-color: #ef4444; }
+            50% { border-color: #dc2626; }
+        }
+
+        @keyframes pulse-teal {
+            0%, 100% { border-color: #14b8a6; }
+            50% { border-color: #0d9488; }
+        }
+        
+        .student-card .help-indicator {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ef4444;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            z-index: 15;
+        }
+        
+        .student-card .memo-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: bold;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+            border: 2px solid white;
+            line-height: 1;
+        }
+        
+        .memos-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            background: #f9fafb;
+        }
+
+        .memo-item {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .memo-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .memo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .memo-mission {
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .memo-date {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .memo-content {
+            color: #4b5563;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+        
+        /* 메시지 아이템 스타일 */
+        .message-item {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #e5e7eb;
+        }
+        
+        .message-item.unread {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .message-item.read {
+            border-left-color: #10b981;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .message-type {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .message-date {
+            color: #6b7280;
+        }
+        
+        .message-status.unread {
+            background: #3b82f6;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .message-status.read {
+            background: #10b981;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .message-content {
+            color: #374151;
+            line-height: 1.4;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .message-actions {
+            text-align: right;
+            margin-top: 8px;
+        }
+
+        .student-number {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            font-size: 19px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .progress-100 .student-number {
+            color: black;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .progress-80 .student-number,
+        .progress-60 .student-number {
+            color: black;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .student-name {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .progress-100 .student-name,
+        .progress-80 .student-name,
+        .progress-60 .student-name {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .progress-percent {
+            font-size: 20px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+
+        .progress-100 .progress-percent,
+        .progress-80 .progress-percent,
+        .progress-60 .progress-percent {
+            color: #374151;
+        }
+
+        .progress-status {
+            font-size: 11px;
+            display: flex;
+            justify-content: center;
+            gap: 3px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #d1d5db;
+        }
+
+        .status-dot.completed {
+            background: #10b981;
+        }
+
+        .status-dot.in-progress {
+            background: #f59e0b;
+        }
+
+        /* 우측 기능 패널 */
+        .function-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            min-height: 780px;
+        }
+
+        .function-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .function-section:last-child {
+            border-bottom: none;
+        }
+
+        .function-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .mission-section .function-title {
+            font-size: 32px;
+        }
+
+        .function-title::before {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        .mission-section .function-title::before { content: "🎯"; }
+        .today-section .function-title::before { content: "✅"; }
+
+        /* 미션 관리 UI */
+        .mission-controls {
+            margin-bottom: 15px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .empty-message {
+            color: #9ca3af;
+            font-style: italic;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        /* 수업 불러오기 모달 스타일 */
+        .load-tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            color: #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+            font-weight: 600;
+        }
+
+        .tab-btn:hover {
+            color: #1f2937;
+            background: #f9fafb;
+        }
+
+        .load-tab-content {
+            min-height: 200px;
+        }
+
+        .class-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .class-item {
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f9fafb;
+        }
+
+        .class-item:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .class-item.selected {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .class-item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .class-item-info {
+            font-size: 14px;
+            color: #6b7280;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .class-item-meta {
+            display: flex;
+            gap: 10px;
+        }
+
+        .class-item-badge {
+            background: #ddd6fe;
+            color: #5b21b6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .class-item-badge.individual {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .class-item-badge.team {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .class-item-delete {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .class-item-delete:hover {
+            background: #fecaca;
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .class-item {
+            position: relative;
+        }
+
+        .loading-message {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .loading-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        .mission-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: move;
+            position: relative;
+        }
+
+        .mission-item:hover {
+            background: #f3f4f6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .mission-item.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .mission-item.drag-over {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .mission-item.today-selected {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .mission-item.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .drag-handle {
+            color: #9ca3af;
+            font-size: 16px;
+            margin-right: 8px;
+            cursor: grab;
+            user-select: none;
+            line-height: 1;
+        }
+
+        .drag-handle:hover {
+            color: #6b7280;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .mission-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mission-number:hover {
+            background: #d1d5db;
+        }
+
+        .mission-number.today-active {
+            background: #10b981;
+            color: white;
+        }
+
+        .mission-text {
+            flex: 1;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .mission-text input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: #374151;
+            padding: 4px 0;
+            outline: none;
+            cursor: text;
+        }
+
+        .mission-text input:focus {
+            background: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 2px solid #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .mission-text:hover input:not(:focus) {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .mission-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .btn-icon {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+        
+        .btn-add-detail {
+            background: #d1fae5;
+            color: #059669;
+        }
+        
+        .btn-add-detail:hover {
+            background: #a7f3d0;
+        }
+
+        /* 미션 상태 */
+        .mission-step {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            font-size: 24px;
+        }
+
+        .mission-step-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .mission-step.completed .mission-step-number {
+            background: #10b981;
+            color: white;
+        }
+
+        .mission-step.current .mission-step-number {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .mission-step.pending .mission-step-number {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .all-mission-steps .mission-step-number {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            width: 480px;
+            max-width: 90vw;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 8px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        /* 단계 표시 */
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+
+        .step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin: 0 10px;
+            position: relative;
+        }
+
+        .step.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .step.completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .step:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 15px;
+            height: 2px;
+            background: #e5e7eb;
+        }
+
+        .step.completed:not(:last-child)::after {
+            background: #10b981;
+        }
+
+        /* 탭 콘텐츠 */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            height: calc(100% - 60px);
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* QR 모달 스타일 */
+        #qrModal .modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        #qr-container {
+            width: 250px;
+            height: 250px;
+            margin-bottom: 20px;
+        }
+
+        /* 메시지 모달 스타일 */
+        #messageModal .modal-body {
+            padding-bottom: 10px;
+        }
+
+        /* 반응형 */
+        @media (max-width: 1200px) {
+            .individual-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .individual-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .group-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>학습 진도판 관리 시스템</h1>
+        <div class="header-buttons">
+            <button class="btn btn-info" onclick="openQRModal()">📱 QR 코드</button>
+            <button class="btn btn-success" onclick="openMessageModal()">💬 메시지</button>
+            <button class="btn btn-warning" onclick="openNewClassModal()">새 수업 시작</button>
+            <button class="btn btn-danger" onclick="openLoadClassModal()">수업 불러오기</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="progress-section">
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('individual')">학생 개별</button>
+                <button class="tab-btn" onclick="switchTab('group')">조별</button>
+            </div>
+
+            <div id="individual-tab" class="tab-content active">
+                <div class="individual-grid" id="individual-grid">
+                    </div>
+            </div>
+
+            <div id="group-tab" class="tab-content">
+                <div class="group-grid" id="group-grid">
+                    </div>
+            </div>
+        </div>
+
+        <div class="function-panel">
+            <div class="function-section mission-section">
+                <div class="function-title">전체 미션 단계</div>
+                <div class="mission-controls">
+                    <button class="btn btn-success btn-sm add-mission-btn" onclick="addNewMission()">➕ 새 미션 추가</button>
+                </div>
+                <div id="all-mission-steps">
+                    <div class="empty-message">새 수업을 생성하거나 기존 수업을 불러와주세요.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="newClassModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">새 수업 설정</h3>
+                <button class="close-btn" onclick="closeModal('newClassModal')">&times;</button>
+            </div>
+
+            <!-- 단계 표시 제거 (1단계만 있으므로 불필요) -->
+
+            <div id="modal-step1" class="modal-step">
+                <div class="form-group">
+                    <label class="form-label">수업 제목</label>
+                    <input type="text" class="form-input" id="classTitle" placeholder="예: 국어 1단원 학습">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">수업 모드</label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" name="classMode" id="individual" value="individual" checked>
+                            <label for="individual">개별 모드</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" name="classMode" id="group" value="group">
+                            <label for="group">조별 모드</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="studentCountGroup">
+                    <label class="form-label">학생 수</label>
+                    <input type="number" class="form-input" id="studentCount" min="1" max="50" value="35">
+                </div>
+
+                <div class="form-group" id="groupCountGroup" style="display: none;">
+                    <label class="form-label">조 개수</label>
+                    <input type="number" class="form-input" id="groupCount" min="1" max="8" value="4">
+                </div>
+            </div>
+
+
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeModal('newClassModal')">취소</button>
+                <button class="btn btn-primary" onclick="startNewClass()">수업 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">학생 접속용 QR 코드</h3>
+                <button class="close-btn" onclick="closeModal('qrModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>학생들에게 이 QR 코드를 공유하여 학습 시스템에 접속하게 하세요.</p>
+                <div id="qr-container"></div>
+                <div style="font-size: 14px; margin-top: 10px; color: #6b7280;">
+                    <a id="qr-url" href="#" target="_blank"></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="messageModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">학생들에게 메시지 보내기</h3>
+                <button class="close-btn" onclick="closeModal('messageModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea class="form-textarea" id="messageInput" placeholder="학생들에게 전달할 메시지를 입력하세요..."></textarea>
+            </div>
+            <div class="modal-buttons" style="justify-content: flex-end;">
+                <button class="btn btn-primary" onclick="sendMessage()">메시지 전송</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="loadClassModal">
+        <div class="modal" style="max-width: 600px; max-height: 70vh;">
+            <div class="modal-header">
+                <h3 class="modal-title">기존 수업 불러오기</h3>
+                <button class="close-btn" onclick="closeModal('loadClassModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <div class="load-options">
+                    <div class="load-tab-buttons">
+                        <button class="tab-btn active" onclick="switchLoadTab('list')">수업 목록</button>
+                        <button class="tab-btn" onclick="switchLoadTab('id')">클래스 ID 입력</button>
+                    </div>
+                    
+                    <!-- 수업 목록 탭 -->
+                    <div id="class-list-tab" class="load-tab-content">
+                        <div id="class-list-loading" class="loading-message" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <p>활성 수업을 불러오는 중...</p>
+                        </div>
+                        <div id="class-list-container" class="class-list">
+                            <div class="empty-message">활성 수업이 없습니다.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 클래스 ID 입력 탭 -->
+                    <div id="class-id-tab" class="load-tab-content" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label">클래스 ID</label>
+                            <input type="text" class="form-input" id="loadClassId" 
+                                   placeholder="클래스 ID를 입력하세요 (예: class_abc123_xyz)">
+                        </div>
+                        <div class="form-group">
+                            <p style="font-size: 14px; color: #6b7280; margin-top: 10px;">
+                                💡 클래스 ID는 수업 생성시 표시되었던 고유 식별자입니다.<br>
+                                QR 코드 URL에서도 확인할 수 있습니다.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons" style="justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal('loadClassModal')">취소</button>
+                <button class="btn btn-primary" id="loadClassButton" onclick="loadExistingClass()">불러오기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase 설정 -->
+    <script type="module">
+        // Firebase 설정과 함수들을 직접 포함
+        
+        // Firebase import
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
+        import { 
+          getFirestore, 
+          collection, 
+          doc, 
+          addDoc, 
+          getDoc, 
+          getDocs, 
+          updateDoc, 
+          setDoc,
+          deleteDoc,
+          query, 
+          where, 
+          orderBy,
+          onSnapshot,
+          serverTimestamp 
+        } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+
+        import { 
+          getDatabase, 
+          ref, 
+          set, 
+          get, 
+          push, 
+          onValue, 
+          off 
+        } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
+
+        // Firebase 설정
+        const firebaseConfig = {
+          apiKey: "AIzaSyBV1IFHlWjQ6ftVmnhX74YITKWCdsjdZLM",
+          authDomain: "classroom-progress.firebaseapp.com",
+          databaseURL: "https://classroom-progress-default-rtdb.asia-southeast1.firebasedatabase.app/",
+          projectId: "classroom-progress",
+          storageBucket: "classroom-progress.firebasestorage.app",
+          messagingSenderId: "307617869427",
+          appId: "1:307617869427:web:20a35dc705cc3fc3854406"
+        };
+
+        // Firebase 앱 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const realtimeDb = getDatabase(app);
+
+        // 전역으로 내보내기
+        window.firebaseApp = app;
+        window.firebaseDb = db;
+        window.realtimeDb = realtimeDb;
+
+        // Firebase 함수들을 전역으로 내보내기
+        window.firebaseFunctions = {
+          collection, doc, addDoc, getDoc, getDocs, updateDoc, setDoc, deleteDoc,
+          query, where, orderBy, onSnapshot, serverTimestamp,
+          ref, set: set, get: get, push, onValue, off
+        };
+
+        // Firebase 함수들 정의
+        
+        // 세션 ID 생성 함수
+        function generateSessionId() {
+          return 'session_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+        }
+
+        // 클래스 ID 생성 함수  
+        function generateClassId() {
+          return 'class_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+        }
+
+        // 새 수업 생성 함수
+        async function createNewClass(classData) {
+          try {
+            const classId = generateClassId();
+            const sessionId = generateSessionId();
+            
+            const classDoc = {
+              classId: classId,
+              sessionId: sessionId,
+              title: classData.title,
+              mode: classData.mode,
+              createdAt: serverTimestamp(),
+              status: 'active',
+              missions: {},
+              todayMissions: []
+            };
+            
+            await addDoc(collection(db, 'classes'), classDoc);
+            
+            console.log('새 수업 생성 완료:', classId);
+            return {
+              success: true,
+              classId: classId,
+              sessionId: sessionId,
+              message: '새 수업이 생성되었습니다.'
+            };
+          } catch (error) {
+            console.error('새 수업 생성 오류:', error);
+            return { success: false, error: error.message };
+          }
+        }
+
+        // 교사 대시보드 데이터 가져오기
+        async function getTeacherDashboardData(classId) {
+          try {
+            const progressQuery = query(
+              collection(db, 'studentProgress'),
+              where('classId', '==', classId)
+            );
+            
+            const progressSnapshot = await getDocs(progressQuery);
+            const studentsData = [];
+            
+            progressSnapshot.forEach(doc => {
+              const data = doc.data();
+              studentsData.push({
+                studentId: data.studentId,
+                missions: data.missions || [],
+                progress: data.progress || 0,
+                helpNeeded: data.helpNeeded || 'NO',
+                hasNewMessage: data.hasNewMessage || 'NO',
+                unreadMemos: data.unreadMemos || 0
+              });
+            });
+            
+            return studentsData;
+          } catch (error) {
+            console.error('대시보드 데이터 로드 오류:', error);
+            return [];
+          }
+        }
+
+        // 학생 데이터 가져오기
+        async function getStudentData(studentId, classId) {
+          try {
+            const progressQuery = query(
+              collection(db, 'studentProgress'),
+              where('classId', '==', classId),
+              where('studentId', '==', studentId)
+            );
+            
+            const progressSnapshot = await getDocs(progressQuery);
+            let studentData = { missions: [], messages: [] };
+            
+            if (!progressSnapshot.empty) {
+              const data = progressSnapshot.docs[0].data();
+              studentData.missions = data.missions || [];
+            }
+            
+            const messagesQuery = query(
+              collection(db, 'messages'),
+              where('classId', '==', classId),
+              where('recipient', 'in', [studentId, 'all'])
+            );
+            
+            const messagesSnapshot = await getDocs(messagesQuery);
+            const messages = [];
+            
+            messagesSnapshot.forEach(doc => {
+              const data = doc.data();
+              messages.push({
+                text: data.message,
+                timestamp: formatTimestamp(data.timestamp),
+                rawTimestamp: data.timestamp
+              });
+            });
+            
+            messages.sort((a, b) => {
+              const aTime = a.rawTimestamp?.toDate ? a.rawTimestamp.toDate() : new Date(a.rawTimestamp);
+              const bTime = b.rawTimestamp?.toDate ? b.rawTimestamp.toDate() : new Date(b.rawTimestamp);
+              return bTime - aTime;
+            });
+            
+            studentData.messages = messages;
+            
+            return {
+              success: true,
+              data: studentData
+            };
+          } catch (error) {
+            console.error('학생 데이터 로드 오류:', error);
+            return {
+              success: false,
+              data: { missions: [], messages: [] }
+            };
+          }
+        }
+
+        // 학생 진행상황 업데이트
+        async function updateStudentProgress(studentId, classId, missionData, helpNeeded = null) {
+          try {
+            const progressQuery = query(
+              collection(db, 'studentProgress'),
+              where('classId', '==', classId),
+              where('studentId', '==', studentId)
+            );
+            
+            const progressSnapshot = await getDocs(progressQuery);
+            
+            const completedMissions = missionData.filter(m => m.completed).length;
+            const totalMissions = missionData.length;
+            const progress = totalMissions > 0 ? Math.round((completedMissions / totalMissions) * 100) : 0;
+            
+            const progressData = {
+              classId: classId,
+              studentId: studentId,
+              missions: missionData,
+              progress: progress,
+              lastUpdate: serverTimestamp(),
+              helpNeeded: helpNeeded !== null ? (helpNeeded ? 'YES' : 'NO') : 'NO',
+              hasNewMessage: 'NO'
+            };
+            
+            if (progressSnapshot.empty) {
+              await setDoc(doc(collection(db, 'studentProgress')), progressData);
+            } else {
+              const docRef = progressSnapshot.docs[0].ref;
+              await setDoc(docRef, progressData, { merge: true });
+            }
+            
+            await sendRealtimeNotification(classId, 'progress-updated', { studentId, progress });
+            
+            return { success: true, progress: progress };
+          } catch (error) {
+            console.error('진행상황 업데이트 오류:', error);
+            return { success: false, error: error.message };
+          }
+        }
+
+        // 미션 저장
+        async function saveMissions(classId, missions) {
+          try {
+            const classQuery = query(
+              collection(db, 'classes'),
+              where('classId', '==', classId)
+            );
+            
+            const classSnapshot = await getDocs(classQuery);
+            
+            if (!classSnapshot.empty) {
+              const classDocRef = classSnapshot.docs[0].ref;
+              
+              const missionsObj = {};
+              missions.forEach(mission => {
+                missionsObj[mission.id] = {
+                  text: mission.text,
+                  description: mission.description || ''
+                };
+              });
+              
+              await setDoc(classDocRef, {
+                missions: missionsObj
+              }, { merge: true });
+              
+              await sendRealtimeNotification(classId, 'missions-updated', { missions: missionsObj });
+            }
+            
+            return { success: true };
+          } catch (error) {
+            console.error('미션 저장 오류:', error);
+            return { success: false, error: error.message };
+          }
+        }
+
+        // 오늘의 미션 저장
+        async function saveTodayMissions(classId, todayMissions) {
+          try {
+            const classQuery = query(
+              collection(db, 'classes'),
+              where('classId', '==', classId)
+            );
+            
+            const classSnapshot = await getDocs(classQuery);
+            
+            if (!classSnapshot.empty) {
+              const classDocRef = classSnapshot.docs[0].ref;
+              
+              await setDoc(classDocRef, {
+                todayMissions: todayMissions
+              }, { merge: true });
+              
+              await sendRealtimeNotification(classId, 'today-missions-updated', { todayMissions });
+            }
+            
+            return { success: true };
+          } catch (error) {
+            console.error('오늘의 미션 저장 오류:', error);
+            return { success: false, error: error.message };
+          }
+        }
+
+        // 미션 데이터 가져오기
+        async function getMissions(classId) {
+          try {
+            const classQuery = query(
+              collection(db, 'classes'),
+              where('classId', '==', classId)
+            );
+            
+            const classSnapshot = await getDocs(classQuery);
+            
+            if (!classSnapshot.empty) {
+              const data = classSnapshot.docs[0].data();
+              
+              const missions = [];
+              if (data.missions) {
+                Object.keys(data.missions).forEach(id => {
+                  const missionData = data.missions[id];
+                  missions.push({
+                    id: parseInt(id),
+                    text: typeof missionData === 'string' ? missionData : missionData.text,
+                    description: typeof missionData === 'string' ? '' : (missionData.description || '')
+                  });
+                });
+              }
+              
+              missions.sort((a, b) => a.id - b.id);
+              
+              return {
+                success: true,
+                data: {
+                  missions: missions,
+                  todayMissions: data.todayMissions || [],
+                  mode: data.mode || 'individual',
+                  count: data.count || 35
+                }
+              };
+            }
+            
+            return {
+              success: true,
+              data: { missions: [], todayMissions: [], mode: 'individual', count: 35 }
+            };
+          } catch (error) {
+            console.error('미션 로드 오류:', error);
+            return {
+              success: false,
+              data: { missions: [], todayMissions: [], mode: 'individual', count: 35 }
+            };
+          }
+        }
+
+        // 도움 요청 전송
+        async function sendHelpRequest(studentId, classId) {
+          try {
+            await addDoc(collection(db, 'helpRequests'), {
+              classId: classId,
+              studentId: studentId,
+              timestamp: serverTimestamp(),
+              status: 'pending'
+            });
+            
+            const progressQuery = query(
+              collection(db, 'studentProgress'),
+              where('classId', '==', classId),
+              where('studentId', '==', studentId)
+            );
+            
+            const progressSnapshot = await getDocs(progressQuery);
+            if (!progressSnapshot.empty) {
+              const docRef = progressSnapshot.docs[0].ref;
+              await setDoc(docRef, {
+                helpNeeded: 'YES'
+              }, { merge: true });
+            }
+            
+            await sendRealtimeNotification(classId, 'help-requested', { studentId });
+            
+            return { success: true };
+          } catch (error) {
+            console.error('도움 요청 오류:', error);
+            return { success: false, error: error.message };
+          }
+        }
+
+        // 메시지 전송
+        async function sendMessage(classId, recipient, message) {
+          try {
+            await addDoc(collection(db, 'messages'), {
+              classId: classId,
+              recipient: recipient,
+              message: message,
+              sender: 'Teacher',
+              timestamp: serverTimestamp()
+            });
+            
+            await sendRealtimeNotification(classId, 'message-sent', { recipient, message });
+            
+            return { success: true };
+          } catch (error) {
+            console.error('메시지 전송 오류:', error);
+            return { success: false, error: error.message };
+          }
+        }
+
+        // 실시간 알림 전송
+        async function sendRealtimeNotification(classId, type, data = {}) {
+          try {
+            await addDoc(collection(db, 'notifications'), {
+              classId: classId,
+              type: type,
+              timestamp: serverTimestamp(),
+              timestampMs: Date.now(),
+              data: data
+            });
+            
+            console.log('실시간 알림 전송:', type, data);
+          } catch (error) {
+            console.error('실시간 알림 전송 오류:', error);
+          }
+        }
+
+        // 실시간 알림 구독
+        function subscribeToNotifications(classId, callback) {
+          const notificationsQuery = query(
+            collection(db, 'notifications'),
+            where('classId', '==', classId)
+          );
+          
+          const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+          
+          return onSnapshot(notificationsQuery, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === 'added') {
+                const data = change.doc.data();
+                
+                if (data.timestampMs > fiveMinutesAgo) {
+                  callback({
+                    type: data.type,
+                    timestamp: data.timestampMs,
+                    data: data.data
+                  });
+                }
+              }
+            });
+          });
+        }
+
+        // 실시간 진행상황 구독
+        function subscribeToProgressUpdates(classId, callback) {
+          const progressQuery = query(
+            collection(db, 'studentProgress'),
+            where('classId', '==', classId)
+          );
+          
+          return onSnapshot(progressQuery, (querySnapshot) => {
+            const progressData = [];
+            querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              progressData.push(data);
+            });
+            callback(progressData);
+          });
+        }
+
+        // 타임스탬프 포맷 함수
+        function formatTimestamp(timestamp) {
+          if (!timestamp) return '';
+          
+          const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+          
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          
+          return `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
+
+        // 클래스 삭제 기능
+        async function deleteClass(classId) {
+          try {
+            let deletedCount = 0;
+            
+            async function deleteCollection(collectionName, description) {
+              try {
+                const q = query(
+                  collection(db, collectionName),
+                  where('classId', '==', classId)
+                );
+                
+                const snapshot = await getDocs(q);
+                
+                for (let i = 0; i < snapshot.docs.length; i++) {
+                  const doc = snapshot.docs[i];
+                  await deleteDoc(doc.ref);
+                  deletedCount++;
+                  
+                  if (i > 0 && i % 5 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  }
+                }
+                
+              } catch (error) {
+                console.warn(`${description} 삭제 중 오류:`, error.message);
+              }
+            }
+            
+            await deleteCollection('classes', '클래스 정보');
+            await deleteCollection('studentProgress', '학생 진행상황');
+            await deleteCollection('messages', '메시지 데이터');
+            await deleteCollection('notifications', '알림 데이터');
+            await deleteCollection('helpRequests', '도움 요청');
+            
+            return { 
+              success: true, 
+              message: `클래스가 완전히 삭제되었습니다. (${deletedCount}개 문서 삭제)`,
+              deletedCount 
+            };
+            
+          } catch (error) {
+            console.error('클래스 삭제 오류:', error);
+            return { 
+              success: false, 
+              error: `삭제 중 오류: ${error.message}`
+            };
+          }
+        }
+
+        // 활성 클래스 목록 가져오기
+        async function getActiveSessions() {
+          try {
+            const classesQuery = query(
+              collection(db, 'classes'),
+              orderBy('createdAt', 'desc')
+            );
+            
+            const classesSnapshot = await getDocs(classesQuery);
+            const sessions = [];
+            
+            classesSnapshot.forEach(doc => {
+              const data = doc.data();
+              sessions.push({
+                sessionId: data.classId,
+                classId: data.classId, 
+                className: data.title,
+                mode: data.mode,
+                count: data.count || 35,
+                date: data.createdAt,
+                status: data.status || 'active'
+              });
+            });
+            
+            return {
+              success: true,
+              sessions: sessions
+            };
+          } catch (error) {
+            console.error('활성 세션 로드 오류:', error);
+            return {
+              success: false,
+              sessions: [],
+              error: error.message
+            };
+          }
+        }
+
+        // 학생 미션 메모 저장
+        async function saveMissionMemo(studentId, classId, missionId, memoContent) {
+          try {
+            const classQuery = query(
+              collection(db, 'classes'),
+              where('classId', '==', classId)
+            );
+            
+            const classSnapshot = await getDocs(classQuery);
+            let missionText = '미션 제목 없음';
+            
+            if (!classSnapshot.empty) {
+              const classData = classSnapshot.docs[0].data();
+              if (classData.missions && classData.missions[missionId]) {
+                const missionData = classData.missions[missionId];
+                missionText = typeof missionData === 'string' ? missionData : missionData.text;
+              }
+            }
+            
+            const progressQuery = query(
+              collection(db, 'studentProgress'),
+              where('classId', '==', classId),
+              where('studentId', '==', studentId)
+            );
+            
+            const progressSnapshot = await getDocs(progressQuery);
+            
+            if (progressSnapshot.empty) {
+              return { success: false, error: '학생 진행상황을 찾을 수 없습니다.' };
+            }
+            
+            const docRef = progressSnapshot.docs[0].ref;
+            const existingData = progressSnapshot.docs[0].data();
+            
+            let memos = existingData.memos || [];
+            
+            const existingMemoIndex = memos.findIndex(m => m.missionId === missionId);
+            
+            const memoData = {
+              missionId: missionId,
+              missionText: missionText,
+              content: memoContent,
+              lastUpdate: new Date()
+            };
+            
+            if (existingMemoIndex >= 0) {
+              memos[existingMemoIndex] = memoData;
+            } else {
+              memos.push(memoData);
+            }
+            
+            await updateDoc(docRef, {
+              memos: memos,
+              unreadMemos: (existingData.unreadMemos || 0) + 1,
+              lastUpdate: new Date()
+            });
+            
+            await addDoc(collection(db, 'studentMemos'), {
+              classId: classId,
+              studentId: studentId,
+              missionId: missionId,
+              missionText: missionText,
+              content: memoContent,
+              timestamp: new Date()
+            });
+            
+            return { success: true };
+            
+          } catch (error) {
+            console.error('미션 메모 저장 오류:', error);
+            return { success: false, error: error.message };
+          }
+        }
+
+        // 전역으로 함수들 내보내기
+        window.classProgressFunctions = {
+          createNewClass,
+          getTeacherDashboardData,
+          getStudentData,
+          updateStudentProgress,
+          saveMissions,
+          saveTodayMissions,
+          getMissions,
+          sendHelpRequest,
+          sendMessage,
+          subscribeToNotifications,
+          subscribeToProgressUpdates,
+          getActiveSessions,
+          deleteClass,
+          saveMissionMemo
+        };
+
+        console.log('✅ Firebase 초기화 완료');
+        console.log('📋 사용 가능한 함수들:', Object.keys(window.classProgressFunctions));
+        
+        console.log('Firebase 모듈들 로드 완료');
+        
+        // 함수들이 제대로 로드되었는지 확인
+        window.addEventListener('load', () => {
+            console.log('window.classProgressFunctions:', window.classProgressFunctions);
+            console.log('Firebase 준비 상태:', {
+                firebaseDb: window.firebaseDb,
+                realtimeDb: window.realtimeDb,
+                functions: window.classProgressFunctions
+            });
+        });
+    </script>
+
+    <script>
+        // Firebase로 완전 전환 - Apps Script URL 제거
+        let currentClassId = null; // 현재 활성 클래스 ID
+        let currentClassData = null; // 현재 클래스의 모드와 개수 정보 저장
+        let currentModalStep = 1;
+        let currentTab = 'individual';
+        const BASE_URL = window.location.origin + window.location.pathname.replace('dashboard.html', '');
+        let missions = {};
+        let lastUpdateTime = null;
+        let isVisible = true;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeStudentCards();
+            initializeGroupCards();
+            setupEventListeners();
+            updateFullMissionDisplay({ 1: '미션1', 2: '미션2', 3: '미션3', 4: '미션4', 5: '미션5' });
+            
+            // 초기 데이터 로드
+            console.log('페이지 로드 - 초기 데이터 로드');
+            loadDashboardData();
+            
+            // 탭이 활성화되어 있을 때만 빠른 업데이트
+            document.addEventListener('visibilitychange', function() {
+                isVisible = !document.hidden;
+                if (isVisible) {
+                    console.log('탭 활성화 - 즉시 새로고침');
+                    loadDashboardData();
+                }
+            });
+            
+            // 🔥 Firebase 실시간 연결 시작
+            console.log('🔥 Firebase 실시간 연결 시작');
+            startFirebaseConnections();
+        });
+
+        function setupEventListeners() {
+            document.querySelectorAll('input[name="classMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    toggleModeInputs(this.value);
+                });
+            });
+            
+            // totalMissions 요소는 더 이상 존재하지 않음 (1단계 모달로 변경)
+        }
+
+        function initializeStudentCards() {
+            const grid = document.getElementById('individual-grid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= 35; i++) {
+                const card = createStudentCard(i, true);
+                grid.appendChild(card);
+            }
+        }
+
+        function initializeGroupCards() {
+            const grid = document.getElementById('group-grid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= 8; i++) {
+                const card = createGroupCard(i, i <= 4);
+                grid.appendChild(card);
+            }
+        }
+
+        function createStudentCard(number, active = true) {
+            const card = document.createElement('div');
+            card.className = `student-card ${active ? 'progress-' + getRandomProgress() : 'inactive'}`;
+            card.id = `student-${number}`;
+
+            if (active) {
+                const progress = getRandomProgress();
+                card.innerHTML = `
+                    <div class="student-number">${number}번</div>
+                    <div class="progress-percent">${progress}%</div>
+                    <div class="progress-status">
+                        ${createStatusDots(5, Math.floor(progress / 20))}
+                    </div>
+                `;
+            }
+
+            return card;
+        }
+
+        function createGroupCard(number, active = true) {
+            const card = document.createElement('div');
+            card.className = `student-card ${active ? 'progress-' + getRandomProgress() : 'inactive'}`;
+            card.id = `group-${number}`;
+
+            if (active) {
+                const progress = getRandomProgress();
+                card.innerHTML = `
+                    <div class="student-number">${number}조</div>
+                    <div class="progress-percent">${progress}%</div>
+                    <div class="progress-status">
+                        ${createStatusDots(5, Math.floor(progress / 20))}
+                    </div>
+                `;
+            }
+
+            return card;
+        }
+
+        function createStatusDots(total, completed) {
+            let dots = '';
+            for (let i = 0; i < total; i++) {
+                if (i < completed) {
+                    dots += '<div class="status-dot completed"></div>';
+                } else if (i === completed) {
+                    dots += '<div class="status-dot in-progress"></div>';
+                } else {
+                    dots += '<div class="status-dot"></div>';
+                }
+            }
+            return dots;
+        }
+
+        function getRandomProgress() {
+            const progresses = [0, 20, 40, 60, 80, 100];
+            return progresses[Math.floor(Math.random() * progresses.length)];
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`).classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            currentTab = tabName;
+        }
+
+        function openQRModal() {
+            const qrModal = document.getElementById('qrModal');
+            const qrContainer = document.getElementById('qr-container');
+            const qrUrlElement = document.getElementById('qr-url');
+            
+            // 현재 활성 클래스 ID를 URL에 포함
+            const activeClassId = getCurrentClassId();
+            let url = BASE_URL + `student.html`;
+            if (activeClassId) {
+                url += `?classId=${activeClassId}`;
+            }
+
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: url,
+                width: 250,
+                height: 250,
+            });
+
+            qrUrlElement.textContent = url;
+            qrUrlElement.href = url;
+
+            qrModal.style.display = 'block';
+        }
+        
+        function getCurrentClassId() {
+            // URL에서 classId를 가져오거나 현재 활성 classId 사용
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('classId') || currentClassId;
+        }
+
+        function openMessageModal() {
+            document.getElementById('messageInput').value = '';
+            document.getElementById('messageModal').style.display = 'block';
+        }
+
+        function openNewClassModal() {
+            document.getElementById('newClassModal').style.display = 'block';
+            resetModalForm();
+        }
+
+        async function openLoadClassModal() {
+            document.getElementById('loadClassModal').style.display = 'block';
+            
+            // 기본으로 수업 목록 탭을 활성화하고 데이터 로드
+            switchLoadTab('list');
+            await loadActiveClasses();
+        }
+
+        async function loadExistingClass() {
+            const activeTab = document.querySelector('.tab-btn.active').textContent;
+            let classId = null;
+            let className = '수업';
+            
+            if (activeTab === '수업 목록') {
+                const selectedItem = document.querySelector('.class-item.selected');
+                if (!selectedItem) {
+                    alert('불러올 수업을 선택해주세요.\n\n💡 팁: 수업을 더블클릭하면 바로 불러올 수 있습니다.');
+                    return;
+                }
+                classId = selectedItem.dataset.classId;
+                className = selectedItem.querySelector('.class-item-title').textContent;
+                
+                // 선택된 클래스를 바로 불러오기
+                await loadSelectedClass(classId, className);
+                return;
+                
+            } else {
+                classId = document.getElementById('loadClassId').value.trim();
+                if (!classId) {
+                    alert('클래스 ID를 입력해주세요.');
+                    return;
+                }
+                className = `클래스 ${classId}`;
+                
+                // ID로 입력한 클래스 불러오기
+                await loadSelectedClass(classId, className);
+                return;
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function resetModalForm() {
+            document.getElementById('classTitle').value = '';
+            document.getElementById('individual').checked = true;
+            document.getElementById('studentCount').value = '35';
+            document.getElementById('groupCount').value = '4';
+            toggleModeInputs('individual');
+        }
+
+        // 모달 단계 관련 함수들 제거됨 (1단계로 단순화)
+
+        function toggleModeInputs(mode) {
+            const studentGroup = document.getElementById('studentCountGroup');
+            const groupGroup = document.getElementById('groupCountGroup');
+
+            if (mode === 'individual') {
+                studentGroup.style.display = 'block';
+                groupGroup.style.display = 'none';
+            } else {
+                studentGroup.style.display = 'none';
+                groupGroup.style.display = 'block';
+            }
+        }
+
+        // updateStepSelects 함수는 더 이상 사용하지 않음 (1단계 모달로 변경)
+
+        // generateMissionInputs 함수는 더 이상 사용하지 않음 (1단계 모달로 변경)
+
+        async function startNewClass() {
+            console.log('startNewClass 함수 호출됨');
+            
+            // Firebase 함수 사용 가능한지 확인
+            if (!window.classProgressFunctions) {
+                console.error('Firebase 함수가 로드되지 않았습니다:', window.classProgressFunctions);
+                alert('Firebase 함수가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
+                return;
+            }
+            
+            if (!window.classProgressFunctions.createNewClass) {
+                console.error('createNewClass 함수가 없습니다:', window.classProgressFunctions);
+                alert('createNewClass 함수를 찾을 수 없습니다.');
+                return;
+            }
+            
+            const title = document.getElementById('classTitle').value.trim();
+            if (!title) {
+                alert('수업 제목을 입력해주세요.');
+                return;
+            }
+
+            const modeRadio = document.querySelector('input[name="classMode"]:checked');
+            if (!modeRadio) {
+                alert('수업 모드를 선택해주세요.');
+                return;
+            }
+            const mode = modeRadio.value;
+            
+            const count = mode === 'individual' ?
+                document.getElementById('studentCount').value :
+                document.getElementById('groupCount').value;
+
+            if (!count || count < 1) {
+                alert(mode === 'individual' ? '학생 수를 입력해주세요.' : '조 개수를 입력해주세요.');
+                return;
+            }
+
+            // Firebase로 새 수업 생성
+            const classData = {
+                title,
+                mode,
+                count: parseInt(count)
+            };
+            
+            console.log('새 수업 설정:', classData);
+            console.log('Firebase 상태:', {
+                firebaseDb: window.firebaseDb,
+                functions: window.classProgressFunctions
+            });
+            
+            try {
+                console.log('createNewClass 함수 호출 중...');
+                const result = await window.classProgressFunctions.createNewClass(classData);
+                
+                if (result.success) {
+                    console.log('새 수업 생성 성공:', result);
+                    
+                    // 새로 생성된 클래스 ID 저장
+                    currentClassId = result.classId;
+                    console.log('새 클래스 ID 저장:', currentClassId);
+                    
+                    // 클래스 데이터 저장
+                    currentClassData = { mode: classData.mode, count: classData.count };
+                    console.log('클래스 데이터 저장:', currentClassData);
+                    
+                    // 헤더에 수업 정보 표시
+                    const pageTitle = document.querySelector('.header h1');
+                    if (pageTitle) {
+                        pageTitle.textContent = title;
+                    }
+                    
+                    if (mode === 'individual') {
+                        switchTab('individual');
+                        updateIndividualView();
+                    } else {
+                        switchTab('group');
+                        updateGroupView();
+                    }
+
+                    // 미션 관리 UI 초기화
+                    initializeMissionManagement();
+                    
+                    alert(`새 수업이 성공적으로 설정되었습니다!\n클래스 ID: ${result.classId}\n\nQR 코드를 통해 학생들이 이 수업에 접속할 수 있습니다.`);
+                    
+                    // 실시간 연결 시작
+                    startFirebaseConnections();
+                    
+                    closeModal('newClassModal');
+                } else {
+                    console.error('새 수업 생성 실패:', result.error);
+                    alert('새 수업 설정 실패: ' + result.error);
+                }
+                
+            } catch (error) {
+                console.error('새 수업 생성 오류:', error);
+                alert('새 수업 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        function updateIndividualView() {
+            const grid = document.getElementById('individual-grid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 35; i++) {
+                const card = createStudentCard(i, true);
+                grid.appendChild(card);
+            }
+        }
+
+        function updateGroupView() {
+            const grid = document.getElementById('group-grid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 8; i++) {
+                const card = createGroupCard(i, true);
+                grid.appendChild(card);
+            }
+        }
+
+        function updateFullMissionDisplay(missions, currentStep = 1) {
+            const container = document.getElementById('all-mission-steps');
+            container.innerHTML = '';
+            for (const step in missions) {
+                const missionDiv = document.createElement('div');
+                let statusClass = '';
+                if (parseInt(step) === currentStep) {
+                    statusClass = 'current';
+                } else if (parseInt(step) < currentStep) {
+                    statusClass = 'completed';
+                } else {
+                    statusClass = 'pending';
+                }
+                missionDiv.className = `mission-step ${statusClass}`;
+                missionDiv.innerHTML = `
+                    <div class="mission-step-number">${step}</div>
+                    <span>${missions[step]}</span>
+                `;
+                container.appendChild(missionDiv);
+            }
+        }
+        
+        async function loadDashboardData() {
+            console.log('대시보드 데이터 로드 중...', currentClassId ? `(클래스 ID: ${currentClassId})` : '(기본 템플릿)');
+            
+            if (!currentClassId) {
+                console.log('활성 클래스 없음 - 빈 대시보드 표시');
+                updateDashboardView([]);
+                return;
+            }
+            
+            if (!window.classProgressFunctions) {
+                console.error('Firebase 함수가 로드되지 않았습니다');
+                updateDashboardView([]);
+                return;
+            }
+            
+            try {
+                const studentsData = await window.classProgressFunctions.getTeacherDashboardData(currentClassId);
+                console.log('대시보드 데이터 로드 성공:', studentsData.length, '명 학생');
+                updateDashboardView(studentsData);
+                updateLastRefreshTime();
+            } catch (error) {
+                console.error('대시보드 데이터 로드 실패:', error);
+                updateDashboardView([]);
+            }
+        }
+        
+        function updateLastRefreshTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            console.log(`마지막 새로고침: ${timeString}`);
+            
+            // 선택적: 헤더에 마지막 업데이트 시간 표시
+            const userInfo = document.querySelector('.user-info');
+            if (userInfo && currentClassId) {
+                const originalText = userInfo.textContent.split(' (')[0];
+                userInfo.textContent = `${originalText} (최근 업데이트: ${timeString})`;
+            }
+        }
+        
+        function updateDashboardView(studentsData) {
+            console.log('대시보드 뷰 업데이트 시작:', { mode: currentClassData?.mode, studentsData });
+            
+            // 현재 모드에 따라 그리드 선택
+            if (currentClassData && currentClassData.mode === 'group') {
+                // 조별 모드 업데이트
+                updateGroupDashboardView(studentsData);
+            } else {
+                // 개별 모드 업데이트
+                updateIndividualDashboardView(studentsData);
+            }
+        }
+        
+        function updateIndividualDashboardView(studentsData) {
+            const individualGrid = document.getElementById('individual-grid');
+            individualGrid.innerHTML = '';
+            
+            // 모든 학생 슬롯 생성 (1~35번 고정)
+            for (let studentNum = 1; studentNum <= 35; studentNum++) {
+                const student = studentsData ? studentsData.find(s => parseInt(s.studentId) === studentNum) : null;
+                const card = document.createElement('div');
+                
+                if (student) {
+                    // 학생 데이터가 있는 경우 - 실제 데이터 표시
+                    const progressClass = 'progress-' + Math.floor(student.progress / 20) * 20;
+                    const helpIndicator = student.helpNeeded === 'YES' ? '<div class="help-indicator">도움</div>' : '';
+                    const memoBadge = (student.unreadMemos && student.unreadMemos > 0) ? 
+                        `<div class="memo-badge">${student.unreadMemos}</div>` : '';
+                    // 접속 상태와 도움 요청 상태에 따른 클래스 조합
+                    let cardClasses = [progressClass];
+                    
+                    // 학생/조 데이터가 있으면 접속된 것으로 간주
+                    if (student.missions && student.missions.length > 0) {
+                        cardClasses.push('connected');
+                    }
+                    
+                    // 도움 요청은 최우선 표시 (빨간색 테두리)
+                    if (student.helpNeeded === 'YES') {
+                        cardClasses.push('help-needed');
+                    }
+                    
+                    card.className = `student-card ${cardClasses.join(' ')}`;
+                    card.id = `student-${student.studentId}`;
+                    
+                    card.innerHTML = `
+                        <div class="student-number">${student.studentId}</div>
+                        <div class="progress-percent">${student.progress}%</div>
+                        <div class="progress-status">
+                            ${createStatusDots(student.missions.length, student.missions.filter(m => m.completed).length)}
+                        </div>
+                        ${helpIndicator}
+                        ${memoBadge}
+                    `;
+                    
+                    card.addEventListener('click', () => {
+                        if (student.helpNeeded === 'YES') {
+                            resolveHelp(student.studentId);
+                        } else {
+                            openStudentDetailModal(student.studentId, false);
+                        }
+                    });
+                } else {
+                    // 학생 데이터가 없는 경우 - 기본 표시
+                    card.className = `student-card progress-0`;
+                    card.id = `student-${studentNum}`;
+                    
+                    card.innerHTML = `
+                        <div class="student-number">${studentNum}</div>
+                        <div class="progress-percent">0%</div>
+                        <div class="progress-status">
+                            ${createStatusDots(5, 0)}
+                        </div>
+                    `;
+                }
+                
+                individualGrid.appendChild(card);
+            }
+            
+            console.log('개별 모드 대시보드 뷰 업데이트 완료');
+        }
+        
+        function updateGroupDashboardView(studentsData) {
+            const groupGrid = document.getElementById('group-grid');
+            groupGrid.innerHTML = '';
+            
+            // 모든 조 슬롯 생성 (1~8조 고정)
+            for (let groupNum = 1; groupNum <= 8; groupNum++) {
+                const groupData = studentsData ? studentsData.find(s => parseInt(s.studentId) === groupNum) : null;
+                const card = document.createElement('div');
+                
+                if (groupData) {
+                    // 조 데이터가 있는 경우 - 실제 데이터 표시
+                    const progressClass = 'progress-' + Math.floor(groupData.progress / 20) * 20;
+                    const helpIndicator = groupData.helpNeeded === 'YES' ? '<div class="help-indicator">도움</div>' : '';
+                    const memoBadge = (groupData.unreadMemos && groupData.unreadMemos > 0) ? 
+                        `<div class="memo-badge">${groupData.unreadMemos}</div>` : '';
+                    // 접속 상태와 도움 요청 상태에 따른 클래스 조합
+                    let cardClasses = [progressClass];
+                    
+                    // 학생/조 데이터가 있으면 접속된 것으로 간주
+                    if (groupData.missions && groupData.missions.length > 0) {
+                        cardClasses.push('connected');
+                    }
+                    
+                    // 도움 요청은 최우선 표시 (빨간색 테두리)
+                    if (groupData.helpNeeded === 'YES') {
+                        cardClasses.push('help-needed');
+                    }
+                    
+                    card.className = `student-card ${cardClasses.join(' ')}`;
+                    card.id = `group-${groupData.studentId}`;
+                    
+                    card.innerHTML = `
+                        <div class="student-number">${groupData.studentId}조</div>
+                        <div class="progress-percent">${groupData.progress}%</div>
+                        <div class="progress-status">
+                            ${createStatusDots(groupData.missions.length, groupData.missions.filter(m => m.completed).length)}
+                        </div>
+                        ${helpIndicator}
+                        ${memoBadge}
+                    `;
+                    
+                    card.addEventListener('click', () => {
+                        if (groupData.helpNeeded === 'YES') {
+                            resolveHelp(groupData.studentId);
+                        } else {
+                            openStudentDetailModal(groupData.studentId, true);
+                        }
+                    });
+                } else {
+                    // 조 데이터가 없는 경우 - 기본 표시
+                    card.className = `student-card progress-0`;
+                    card.id = `group-${groupNum}`;
+                    
+                    card.innerHTML = `
+                        <div class="student-number">${groupNum}조</div>
+                        <div class="progress-percent">0%</div>
+                        <div class="progress-status">
+                            ${createStatusDots(5, 0)}
+                        </div>
+                    `;
+                }
+                
+                groupGrid.appendChild(card);
+            }
+            
+            console.log('조별 모드 대시보드 뷰 업데이트 완료');
+        }
+
+        async function sendMessage() {
+            const message = document.getElementById('messageInput').value.trim();
+            if (!message) {
+                alert('메시지를 입력해주세요.');
+                return;
+            }
+            
+            if (!currentClassId) {
+                alert('활성 클래스가 없습니다.');
+                return;
+            }
+            
+            if (!window.classProgressFunctions) {
+                alert('Firebase 연결이 되지 않았습니다.');
+                return;
+            }
+            
+            try {
+                const result = await window.classProgressFunctions.sendMessage(currentClassId, 'all', message);
+                if (result.success) {
+                    alert('메시지가 모든 학생에게 전송되었습니다!');
+                } else {
+                    alert('메시지 전송 실패: ' + result.error);
+                }
+            } catch (error) {
+                console.error('메시지 전송 오류:', error);
+                alert('메시지 전송 중 오류가 발생했습니다.');
+            }
+            
+            closeModal('messageModal');
+            document.getElementById('messageInput').value = '';
+        }
+
+        window.addEventListener('click', function(event) {
+            const newClassModal = document.getElementById('newClassModal');
+            const qrModal = document.getElementById('qrModal');
+            const messageModal = document.getElementById('messageModal');
+            const loadClassModal = document.getElementById('loadClassModal');
+
+            if (event.target === newClassModal) {
+                closeModal('newClassModal');
+            }
+            if (event.target === qrModal) {
+                closeModal('qrModal');
+            }
+            if (event.target === messageModal) {
+                closeModal('messageModal');
+            }
+            if (event.target === loadClassModal) {
+                closeModal('loadClassModal');
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    if (modal.style.display === 'block') {
+                        modal.style.display = 'none';
+                    }
+                });
+            }
+        });
+
+        // 미션 관리 시스템
+        let allMissions = [];
+        let todayMissions = new Set();
+
+        function initializeMissionManagement() {
+            // 서버에서 기존 미션 데이터 로드
+            loadMissionsFromServer();
+        }
+
+        async function addNewMission() {
+            const newMissionId = allMissions.length > 0 ? Math.max(...allMissions.map(m => m.id)) + 1 : 1;
+            const newMission = {
+                id: newMissionId,
+                text: `미션 ${newMissionId} - 새로운 학습 과제`
+            };
+            
+            allMissions.push(newMission);
+            updateMissionDisplay();
+            
+            // Firebase에 저장
+            const classId = getCurrentClassId();
+            if (classId) {
+                try {
+                    await window.classProgressFunctions.saveMissions(classId, allMissions);
+                    console.log('새 미션 추가됨:', newMission);
+                } catch (error) {
+                    console.error('미션 저장 실패:', error);
+                }
+            }
+            
+            // 방금 추가된 미션의 텍스트 입력 칸에 포커스
+            setTimeout(() => {
+                const newMissionInput = document.querySelector(`[data-mission-id="${newMissionId}"] input`);
+                if (newMissionInput) {
+                    newMissionInput.focus();
+                    newMissionInput.select();
+                }
+            }, 100);
+        }
+
+        async function deleteMission(missionId) {
+            const missionToDelete = allMissions.find(m => m.id === missionId);
+            if (!missionToDelete) return;
+            
+            if (confirm(`"${missionToDelete.text}" 미션을 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`)) {
+                // 로컬에서 제거
+                allMissions = allMissions.filter(m => m.id !== missionId);
+                todayMissions.delete(missionId);
+                
+                // ID 재정렬 (선택사항 - 기존 방식 유지)
+                allMissions.forEach((mission, index) => {
+                    mission.id = index + 1;
+                });
+                
+                // 화면 업데이트
+                updateMissionDisplay();
+                
+                // Firebase에 저장
+                const classId = getCurrentClassId();
+                if (classId) {
+                    try {
+                        await window.classProgressFunctions.saveMissions(classId, allMissions);
+                        await window.classProgressFunctions.saveTodayMissions(classId, Array.from(todayMissions));
+                        console.log('미션 삭제됨:', missionToDelete);
+                    } catch (error) {
+                        console.error('미션 삭제 저장 실패:', error);
+                    }
+                }
+            }
+        }
+
+        function toggleTodayMission(missionId) {
+            if (todayMissions.has(missionId)) {
+                todayMissions.delete(missionId);
+            } else {
+                todayMissions.add(missionId);
+            }
+            updateMissionDisplay();
+            saveTodayMissionsToServer();
+            
+            // 🔥 Firebase 실시간 알림
+            sendFirebaseNotification('mission-updated', { type: 'today-missions-changed' });
+        }
+
+        async function updateMissionText(missionId, newText) {
+            const mission = allMissions.find(m => m.id === missionId);
+            if (!mission) return;
+            
+            const oldText = mission.text;
+            if (oldText === newText.trim()) return; // 변경사항 없으면 패스
+            
+            mission.text = newText.trim();
+            console.log(`미션 ${missionId} 텍스트 변경: "${oldText}" → "${mission.text}"`);
+            
+            // Firebase에 저장
+            const classId = getCurrentClassId();
+            if (classId) {
+                try {
+                    await window.classProgressFunctions.saveMissions(classId, allMissions);
+                    console.log('미션 텍스트 변경 저장 완료');
+                } catch (error) {
+                    console.error('미션 텍스트 변경 저장 실패:', error);
+                    // 저장 실패시 원래 텍스트로 복원
+                    mission.text = oldText;
+                }
+            }
+        }
+
+        function updateMissionDisplay() {
+            const allStepsContainer = document.getElementById('all-mission-steps');
+
+            // 전체 미션 표시
+            if (allMissions.length === 0) {
+                allStepsContainer.innerHTML = '<div class="empty-message">미션 추가 버튼을 클릭하여 새 미션을 추가하세요.</div>';
+            } else {
+                allStepsContainer.innerHTML = '';
+                allMissions.forEach(mission => {
+                    const missionDiv = document.createElement('div');
+                    missionDiv.className = 'mission-item';
+                    missionDiv.draggable = true; // 드래그 가능 설정
+                    missionDiv.dataset.missionId = mission.id; // 미션 ID 저장
+                    
+                    if (todayMissions.has(mission.id)) {
+                        missionDiv.classList.add('today-selected');
+                    }
+                    
+                    // 드래그 이벤트 리스너 추가
+                    missionDiv.addEventListener('dragstart', handleDragStart);
+                    missionDiv.addEventListener('dragover', handleDragOver);
+                    missionDiv.addEventListener('drop', handleDrop);
+                    missionDiv.addEventListener('dragend', handleDragEnd);
+                    
+                    missionDiv.innerHTML = `
+                        <div class="drag-handle" title="드래그하여 순서 변경">⋮⋮</div>
+                        <div class="mission-number ${todayMissions.has(mission.id) ? 'today-active' : ''}" 
+                             onclick="toggleTodayMission(${mission.id})" 
+                             title="클릭하여 오늘의 할일로 설정/해제">${mission.id}</div>
+                        <div class="mission-text">
+                            <input type="text" 
+                                   value="${mission.text}" 
+                                   onblur="updateMissionText(${mission.id}, this.value)"
+                                   onkeypress="if(event.key==='Enter') this.blur()"
+                                   onclick="this.select()"
+                                   placeholder="미션 내용을 입력하세요">
+                        </div>
+                        <div class="mission-actions">
+                            <button class="btn-icon btn-add-detail" 
+                                    onclick="openMissionDetailModal(${mission.id})" 
+                                    title="상세 내용 추가/편집">➕</button>
+                            <button class="btn-icon btn-delete" 
+                                    onclick="deleteMission(${mission.id})" 
+                                    title="이 미션 삭제">🗑️</button>
+                        </div>
+                    `;
+                    allStepsContainer.appendChild(missionDiv);
+                });
+            }
+        }
+
+        // 드래그 앤 드롭 관련 변수들
+        let draggedElement = null;
+        let draggedMissionId = null;
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            draggedMissionId = parseInt(e.target.dataset.missionId);
+            e.target.classList.add('dragging');
+            
+            // 드래그 데이터 설정
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+            
+            // 드래그 시작할 때 반투명 효과
+            e.target.style.opacity = '0.5';
+            
+            console.log('드래그 시작:', draggedMissionId);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const container = document.getElementById('all-mission-steps');
+            const afterElement = getDragAfterElement(container, e.clientY);
+            
+            if (afterElement == null) {
+                container.appendChild(draggedElement);
+            } else {
+                container.insertBefore(draggedElement, afterElement);
+            }
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            
+            if (!draggedElement || !draggedMissionId) return;
+            
+            console.log('드롭 발생');
+            
+            // 드롭 위치 계산
+            const container = document.getElementById('all-mission-steps');
+            const afterElement = getDragAfterElement(container, e.clientY);
+            
+            let newPosition = 0;
+            if (afterElement) {
+                const afterMissionId = parseInt(afterElement.dataset.missionId);
+                newPosition = allMissions.findIndex(m => m.id === afterMissionId);
+            } else {
+                newPosition = allMissions.length;
+            }
+            
+            // 현재 위치
+            const currentPosition = allMissions.findIndex(m => m.id === draggedMissionId);
+            
+            if (currentPosition !== newPosition && currentPosition !== newPosition - 1) {
+                console.log(`미션 ${draggedMissionId} 이동: ${currentPosition} → ${newPosition}`);
+                await reorderMissions(draggedMissionId, newPosition);
+            }
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            e.target.style.opacity = '1'; // 투명도 복원
+            
+            draggedElement = null;
+            draggedMissionId = null;
+            
+            console.log('드래그 종료');
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.mission-item:not(.dragging)')];
+            
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        async function reorderMissions(draggedId, newIndex) {
+            // 드래그된 미션 찾기
+            const draggedMission = allMissions.find(m => m.id === draggedId);
+            const oldIndex = allMissions.indexOf(draggedMission);
+            
+            // 배열에서 제거
+            allMissions.splice(oldIndex, 1);
+            // 새 위치에 삽입
+            allMissions.splice(newIndex, 0, draggedMission);
+            
+            // ID 재할당 (1부터 시작)
+            allMissions.forEach((mission, index) => {
+                const oldId = mission.id;
+                const newId = index + 1;
+                
+                // todayMissions Set도 업데이트
+                if (todayMissions.has(oldId)) {
+                    todayMissions.delete(oldId);
+                    todayMissions.add(newId);
+                }
+                
+                mission.id = newId;
+            });
+            
+            // 화면 업데이트
+            updateMissionDisplay();
+            
+            // Firebase에 저장
+            const classId = getCurrentClassId();
+            if (classId) {
+                try {
+                    await window.classProgressFunctions.saveMissions(classId, allMissions);
+                    await window.classProgressFunctions.saveTodayMissions(classId, Array.from(todayMissions));
+                    console.log('미션 순서 변경 저장 완료');
+                } catch (error) {
+                    console.error('미션 순서 변경 저장 실패:', error);
+                }
+            }
+            
+            // 🔥 Firebase 실시간 알림
+            sendFirebaseNotification('structure-updated', { type: 'missions-reordered', newOrder: allMissions.map(m => m.id) });
+            
+            console.log('미션 순서 변경 완료:', allMissions);
+        }
+
+        // 🔥 Firebase 알림 전송 함수
+        function sendFirebaseNotification(type, data = {}) {
+            if (!currentClassId) {
+                console.log('classId가 없어서 Firebase 알림 전송 안 함');
+                return;
+            }
+            
+            try {
+                const { ref, set } = window.firebaseFunctions;
+                const realtimeDb = window.realtimeDb;
+                const notificationRef = ref(realtimeDb, `classes/${currentClassId}/notifications`);
+                
+                const notification = {
+                    type: type,
+                    timestamp: Date.now(),
+                    ...data
+                };
+                
+                set(notificationRef, notification);
+                console.log('🔥 Firebase 알림 전송:', notification);
+            } catch (error) {
+                console.error('Firebase 알림 전송 실패:', error);
+            }
+        }
+
+        async function saveMissionsToServer() {
+            if (!currentClassId || allMissions.length === 0) return;
+            
+            if (!window.classProgressFunctions) {
+                console.error('Firebase 함수가 로드되지 않았습니다');
+                return;
+            }
+            
+            try {
+                const result = await window.classProgressFunctions.saveMissions(currentClassId, allMissions);
+                if (!result.success) {
+                    console.error('미션 저장 실패:', result.error);
+                }
+            } catch (error) {
+                console.error('미션 저장 오류:', error);
+            }
+        }
+
+        async function saveTodayMissionsToServer() {
+            if (!currentClassId) return;
+            
+            if (!window.classProgressFunctions) {
+                console.error('Firebase 함수가 로드되지 않았습니다');
+                return;
+            }
+            
+            try {
+                const result = await window.classProgressFunctions.saveTodayMissions(currentClassId, Array.from(todayMissions));
+                if (!result.success) {
+                    console.error('오늘의 할일 저장 실패:', result.error);
+                }
+            } catch (error) {
+                console.error('오늘의 할일 저장 오류:', error);
+            }
+        }
+
+        async function loadMissionsFromServer() {
+            if (!currentClassId) return;
+            
+            if (!window.classProgressFunctions) {
+                console.error('Firebase 함수가 로드되지 않았습니다');
+                return;
+            }
+            
+            try {
+                const result = await window.classProgressFunctions.getMissions(currentClassId);
+                if (result.success) {
+                    allMissions = result.data.missions || [];
+                    todayMissions = new Set(result.data.todayMissions || []);
+                    updateMissionDisplay();
+                    console.log('미션 데이터 로드 완료');
+                } else {
+                    console.error('미션 로드 실패:', result.error);
+                }
+            } catch (error) {
+                console.error('미션 로드 오류:', error);
+            }
+        }
+        
+        // 수업 불러오기 관련 함수들
+        function switchLoadTab(tabName) {
+            // 탭 버튼 상태 변경
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 탭 내용 표시/숨기기
+            document.querySelectorAll('.load-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            if (tabName === 'list') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('class-list-tab').style.display = 'block';
+                document.getElementById('loadClassButton').textContent = '선택한 수업 불러오기';
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('class-id-tab').style.display = 'block';
+                document.getElementById('loadClassButton').textContent = '클래스 ID로 불러오기';
+            }
+        }
+        
+        async function loadActiveClasses() {
+            const loadingEl = document.getElementById('class-list-loading');
+            const containerEl = document.getElementById('class-list-container');
+            
+            loadingEl.style.display = 'block';
+            containerEl.innerHTML = '';
+            
+            try {
+                const result = await window.classProgressFunctions.getActiveSessions();
+                
+                loadingEl.style.display = 'none';
+                
+                if (result.success && result.sessions.length > 0) {
+                    containerEl.innerHTML = '';
+                    
+                    result.sessions.forEach(session => {
+                        const classItem = createClassItem(session);
+                        containerEl.appendChild(classItem);
+                    });
+                } else {
+                    containerEl.innerHTML = '<div class="empty-message">활성 수업이 없습니다.</div>';
+                }
+                
+            } catch (error) {
+                console.error('활성 수업 로드 실패:', error);
+                loadingEl.style.display = 'none';
+                containerEl.innerHTML = '<div class="empty-message">수업 목록을 불러오는데 실패했습니다.</div>';
+            }
+        }
+        
+        function createClassItem(session) {
+            const div = document.createElement('div');
+            div.className = 'class-item';
+            div.dataset.classId = session.sessionId;
+            
+            const formatDate = (timestamp) => {
+                if (!timestamp) return '알 수 없음';
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                return date.toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+            
+            div.innerHTML = `
+                <div class="class-item-title">${session.className || '제목 없는 수업'}</div>
+                <div class="class-item-info">
+                    <div class="class-item-meta">
+                        <span class="class-item-badge ${session.mode === 'individual' ? 'individual' : 'team'}">
+                            ${session.mode === 'individual' ? '개별' : '조별'}
+                        </span>
+                        <span>${session.count || 0}${session.mode === 'individual' ? '명' : '개 조'}</span>
+                    </div>
+                    <div class="class-item-date">${formatDate(session.date)}</div>
+                </div>
+                <button class="class-item-delete" onclick="event.stopPropagation(); deleteClassConfirm('${session.classId}', '${session.className || '제목 없는 수업'}')">🗑️</button>
+            `;
+            
+            div.addEventListener('click', function() {
+                // 다른 선택 해제
+                document.querySelectorAll('.class-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // 현재 항목 선택
+                this.classList.add('selected');
+            });
+            
+            // 더블클릭시 바로 불러오기
+            div.addEventListener('dblclick', function() {
+                const classId = this.dataset.classId;
+                const className = session.className || '제목 없는 수업';
+                console.log(`🚀 더블클릭으로 수업 바로 불러오기: ${classId} - ${className}`);
+                loadSelectedClass(classId, className);
+            });
+            
+            return div;
+        }
+
+        // 선택된 클래스 바로 불러오기
+        async function loadSelectedClass(classId, className) {
+            try {
+                console.log(`📚 클래스 불러오기 시작: ${classId} - ${className}`);
+                
+                // 현재 작업 중인 클래스 ID 설정
+                currentClassId = classId;
+                
+                // 헤더에 클래스 정보 표시  
+                const pageTitle = document.querySelector('.header h1');
+                if (pageTitle) {
+                    pageTitle.textContent = className;
+                }
+                
+                // 탭 전환 (개별/조별 중 적절한 탭)
+                const result = await window.classProgressFunctions.getActiveSessions();
+                const classInfo = result.sessions?.find(s => s.classId === classId);
+                
+                if (classInfo && classInfo.mode === 'group') {
+                    // 클래스 데이터 저장
+                    currentClassData = { mode: 'group', count: classInfo.count || 4 };
+                    console.log('조별 클래스 데이터 저장:', currentClassData);
+                    switchTab('group');
+                    updateGroupView();
+                } else {
+                    // 클래스 데이터 저장
+                    currentClassData = { mode: 'individual', count: classInfo?.count || 35 };
+                    console.log('개별 클래스 데이터 저장:', currentClassData);
+                    switchTab('individual');
+                    updateIndividualView();
+                }
+                
+                // 미션 관리 UI 초기화
+                initializeMissionManagement();
+                
+                // Firebase 실시간 연결 시작
+                startFirebaseConnections();
+                
+                // 대시보드 데이터 로드
+                await loadDashboardData();
+                
+                // 모달 닫기
+                closeModal('loadClassModal');
+                
+                console.log(`✅ 클래스 불러오기 완료: ${className}`);
+                
+            } catch (error) {
+                console.error('클래스 불러오기 실패:', error);
+                alert(`클래스 불러오기에 실패했습니다: ${error.message}`);
+            }
+        }
+
+        // 클래스 삭제 확인 함수
+        async function deleteClassConfirm(classId, className) {
+            const confirmed = confirm(`정말로 "${className}" 수업을 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없으며, 다음 데이터가 모두 삭제됩니다:\n• 수업 정보\n• 모든 학생 진행상황\n• 미션 데이터\n• 메시지 내역\n• 도움 요청 내역`);
+            
+            if (confirmed) {
+                await deleteClassFromFirebase(classId, className);
+            }
+        }
+
+        // Firebase에서 클래스 완전 삭제 (개선된 버전)
+        async function deleteClassFromFirebase(classId, className) {
+            // 삭제 진행 상태 표시
+            const deleteButton = document.querySelector(`button[onclick*="${classId}"]`);
+            if (deleteButton) {
+                deleteButton.disabled = true;
+                deleteButton.innerHTML = '⏳';
+                deleteButton.style.opacity = '0.5';
+            }
+            
+            try {
+                console.log(`🗑️ 클래스 삭제 시작: ${classId} - ${className}`);
+                
+                // 삭제 진행률 표시를 위한 간단한 알림
+                const deleteNotification = setTimeout(() => {
+                    console.log('⏳ 삭제 진행 중... (대량 데이터가 있을 경우 시간이 걸릴 수 있습니다)');
+                }, 2000);
+                
+                const result = await window.classProgressFunctions.deleteClass(classId);
+                
+                clearTimeout(deleteNotification);
+                
+                if (result.success) {
+                    const message = result.deletedCount 
+                        ? `"${className}" 수업이 성공적으로 삭제되었습니다.\n(${result.deletedCount}개의 관련 데이터 삭제)`
+                        : `"${className}" 수업이 성공적으로 삭제되었습니다.`;
+                    
+                    alert(message);
+                    console.log('✅ 클래스 삭제 성공:', classId);
+                    
+                    // 현재 활성 클래스가 삭제된 클래스인지 확인
+                    if (currentClassId === classId) {
+                        currentClassId = null;
+                        console.log('🔄 활성 클래스가 삭제됨 - 대시보드 초기화');
+                        
+                        // 헤더 제목 초기화
+                        const pageTitle = document.querySelector('.header h1');
+                        if (pageTitle) {
+                            pageTitle.textContent = '학습 진도판 관리 시스템';
+                        }
+                        
+                        // 대시보드 초기화
+                        updateDashboardView([]);
+                    }
+                    
+                    // 수업 목록 새로고침
+                    await loadActiveClasses();
+                    
+                } else {
+                    const errorMessage = `클래스 삭제 실패: ${result.error}`;
+                    if (result.deletedCount > 0) {
+                        alert(`${errorMessage}\n\n일부 데이터는 삭제되었을 수 있습니다. (${result.deletedCount}개)`);
+                    } else {
+                        alert(errorMessage);
+                    }
+                    console.error('❌ 클래스 삭제 실패:', result.error);
+                    
+                    // 버튼 상태 복원
+                    if (deleteButton) {
+                        deleteButton.disabled = false;
+                        deleteButton.innerHTML = '🗑️';
+                        deleteButton.style.opacity = '0.7';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ 클래스 삭제 중 예외 발생:', error);
+                alert(`클래스 삭제 중 오류가 발생했습니다: ${error.message}`);
+                
+                // 버튼 상태 복원
+                if (deleteButton) {
+                    deleteButton.disabled = false;
+                    deleteButton.innerHTML = '🗑️';
+                    deleteButton.style.opacity = '0.7';
+                }
+            }
+        }
+        
+        async function loadMissionsFromFirebase() {
+            if (!currentClassId) {
+                console.error('현재 클래스 ID가 없습니다.');
+                return;
+            }
+            
+            try {
+                console.log('Firebase에서 미션 데이터 로드 중...', currentClassId);
+                
+                const result = await window.classProgressFunctions.getMissions(currentClassId);
+                
+                if (result.success) {
+                    // 전체 미션 업데이트
+                    if (result.data.missions && Array.isArray(result.data.missions)) {
+                        console.log('전체 미션 업데이트됨:', result.data.missions);
+                        allMissions.length = 0;
+                        allMissions.push(...result.data.missions);
+                    }
+                    
+                    // 오늘의 미션 업데이트
+                    todayMissions.clear();
+                    if (result.data.todayMissions && Array.isArray(result.data.todayMissions)) {
+                        result.data.todayMissions.forEach(missionId => {
+                            todayMissions.add(missionId);
+                        });
+                    }
+                    
+                    updateMissionDisplay();
+                    console.log('미션 데이터 로드 완료');
+                    
+                } else {
+                    console.error('미션 로드 실패:', result.error);
+                    // 빈 미션으로 초기화
+                    allMissions.length = 0;
+                    todayMissions.clear();
+                    updateMissionDisplay();
+                }
+            } catch (error) {
+                console.error('Firebase 미션 로드 오류:', error);
+                throw error; // 상위에서 처리하도록
+            }
+        }
+        
+        // Firebase 실시간 연결 함수들
+        function startFirebaseConnections() {
+            const classId = getCurrentClassId();
+            if (!classId) {
+                console.log('클래스 ID가 없어서 실시간 연결을 시작할 수 없습니다.');
+                return;
+            }
+            
+            console.log('Firebase 실시간 연결 시작:', classId);
+            
+            // 진행상황 실시간 구독
+            const progressUnsubscribe = window.classProgressFunctions.subscribeToProgressUpdates(
+                classId, 
+                (progressData) => {
+                    console.log('실시간 진행상황 업데이트:', progressData);
+                    updateDashboardView(progressData);
+                }
+            );
+            
+            // 실시간 알림 구독
+            const notificationUnsubscribe = window.classProgressFunctions.subscribeToNotifications(
+                classId,
+                (notification) => {
+                    console.log('실시간 알림:', notification);
+                    handleRealtimeNotification(notification);
+                }
+            );
+            
+            // 정리 함수들 저장
+            window.firebaseUnsubscribes = {
+                progress: progressUnsubscribe,
+                notifications: notificationUnsubscribe
+            };
+        }
+        
+        function handleRealtimeNotification(notification) {
+            switch(notification.type) {
+                case 'help-requested':
+                    console.log('도움 요청 알림:', notification.data.studentId);
+                    loadDashboardData(); // 대시보드 새로고침
+                    break;
+                case 'progress-updated':
+                    console.log('진행상황 업데이트:', notification.data);
+                    // 이미 subscribeToProgressUpdates에서 처리됨
+                    break;
+                case 'message-sent':
+                    console.log('메시지 전송됨');
+                    break;
+            }
+        }
+        
+        async function resolveHelp(studentId) {
+            if (!currentClassId) {
+                alert('클래스 ID가 없습니다.');
+                return;
+            }
+            
+            try {
+                const result = await window.classProgressFunctions.resolveHelpRequest(studentId, currentClassId);
+                
+                if (result.success) {
+                    console.log(`${studentId}번 학생 도움 요청 해결됨`);
+                    loadDashboardData(); // 대시보드 새로고침
+                } else {
+                    console.error('도움 요청 해결 실패:', result.error);
+                    alert('도움 요청 해결에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('도움 요청 해결 중 오류:', error);
+                alert('도움 요청 해결 중 오류가 발생했습니다.');
+            }
+        }
+        
+        
+        async function loadDashboardDataFirebase() {
+            const classId = getCurrentClassId();
+            if (!classId) {
+                console.log('클래스 ID가 없어서 대시보드 데이터를 로드할 수 없습니다.');
+                return;
+            }
+            
+            console.log('대시보드 데이터 로드 중...', classId);
+            
+            try {
+                const studentsData = await window.classProgressFunctions.getTeacherDashboardData(classId);
+                console.log('대시보드 데이터 로드 성공:', studentsData.length, '명');
+                updateDashboardView(studentsData);
+                updateLastRefreshTime();
+            } catch (error) {
+                console.error('대시보드 데이터 로드 실패:', error);
+                updateDashboardView([]);
+            }
+        }
+        
+        // Firebase 버전 메시지 전송 함수로 기존 함수 오버라이드
+        window.sendMessage = async function() {
+            const message = document.getElementById('messageInput').value.trim();
+            if (!message) {
+                alert('메시지를 입력해주세요.');
+                return;
+            }
+            
+            const classId = getCurrentClassId();
+            if (!classId) {
+                alert('클래스 ID가 없습니다.');
+                return;
+            }
+            
+            try {
+                const result = await window.classProgressFunctions.sendMessage(classId, 'all', message);
+                if (result.success) {
+                    alert('메시지가 모든 학생에게 전송되었습니다!');
+                    closeModal('messageModal');
+                    document.getElementById('messageInput').value = '';
+                } else {
+                    alert('메시지 전송 실패: ' + result.error);
+                }
+            } catch (error) {
+                alert('메시지 전송 중 오류가 발생했습니다: ' + error.message);
+            }
+        };
+        
+        // 페이지 언로드 시 정리
+        window.addEventListener('beforeunload', function() {
+            if (window.firebaseUnsubscribes) {
+                if (window.firebaseUnsubscribes.progress) {
+                    window.firebaseUnsubscribes.progress();
+                }
+                if (window.firebaseUnsubscribes.notifications) {
+                    window.firebaseUnsubscribes.notifications();
+                }
+            }
+        });
+        
+        // 미션 상세내용 관련 함수들
+        let currentEditingMissionId = null;
+        
+        function openMissionDetailModal(missionId) {
+            currentEditingMissionId = missionId;
+            const mission = allMissions.find(m => m.id === missionId);
+            
+            if (mission) {
+                document.getElementById('missionDetailTitle').value = mission.text;
+                document.getElementById('missionDetailContent').value = mission.description || '';
+                document.getElementById('missionDetailModal').style.display = 'flex';
+            }
+        }
+        
+        function closeMissionDetailModal() {
+            document.getElementById('missionDetailModal').style.display = 'none';
+            currentEditingMissionId = null;
+        }
+        
+        async function saveMissionDetail() {
+            if (!currentEditingMissionId) return;
+            
+            const description = document.getElementById('missionDetailContent').value.trim();
+            
+            try {
+                // allMissions 배열에서 해당 미션 찾아서 description 추가
+                const missionIndex = allMissions.findIndex(m => m.id === currentEditingMissionId);
+                if (missionIndex !== -1) {
+                    allMissions[missionIndex].description = description;
+                }
+                
+                // Firebase에 저장
+                const result = await window.classProgressFunctions.saveMissions(currentClassId, allMissions);
+                
+                if (result.success) {
+                    console.log('미션 상세내용 저장 성공');
+                    closeMissionDetailModal();
+                    updateMissionDisplay();
+                } else {
+                    console.error('미션 상세내용 저장 실패:', result.error);
+                    alert('저장에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('미션 상세내용 저장 오류:', error);
+                alert('저장 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 학생 상세 정보 모달 관리
+        let currentViewingStudent = null;
+        
+        async function openStudentDetailModal(studentId, isGroup = false) {
+            currentViewingStudent = { id: studentId, isGroup };
+            
+            // 학생/조 정보 표시
+            const studentLabel = isGroup ? `${studentId}조` : `${studentId}번`;
+            document.getElementById('studentDetailLabel').textContent = studentLabel;
+            
+            // 메시지/메모 정보 로드 (통합)
+            await loadStudentMessages(studentId, isGroup);
+            
+            // 모달 표시
+            document.getElementById('studentDetailModal').style.display = 'flex';
+        }
+        
+        function closeStudentDetailModal() {
+            document.getElementById('studentDetailModal').style.display = 'none';
+            currentViewingStudent = null;
+        }
+        
+        async function loadStudentMessages(studentId, isGroup = false) {
+            try {
+                // 기존 메모 데이터를 메시지로 활용
+                const { collection, query, where, getDocs } = window.firebaseFunctions;
+                const studentMemosRef = collection(window.firebaseDb, 'studentMemos');
+                
+                const messagesQuery = query(
+                    studentMemosRef,
+                    where('classId', '==', currentClassId),
+                    where('studentId', '==', studentId.toString())
+                );
+                
+                const querySnapshot = await getDocs(messagesQuery);
+                const messages = [];
+                let unreadCount = 0;
+                
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    messages.push({
+                        id: doc.id,
+                        content: data.content,
+                        timestamp: data.timestamp?.toDate() || new Date(),
+                        isRead: data.isRead || false,
+                        type: data.type || 'question',
+                        missionText: data.missionText || '일반 메시지'
+                    });
+                    
+                    if (!data.isRead) {
+                        unreadCount++;
+                    }
+                });
+                
+                // 최신순으로 정렬
+                messages.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // 메시지 목록 표시
+                displayStudentMessages(messages, unreadCount);
+                
+            } catch (error) {
+                console.error('학생 메시지 로드 실패:', error);
+                document.getElementById('studentMessagesList').innerHTML = 
+                    '<div class="empty-message">메시지를 불러오는데 실패했습니다.</div>';
+            }
+        }
+        
+        function displayStudentMessages(messages, unreadCount) {
+            const container = document.getElementById('studentMessagesList');
+            const countBadge = document.getElementById('unreadMessageCount');
+            const markAllBtn = document.getElementById('markAllReadBtn');
+            
+            // 미읽음 카운트 표시
+            if (unreadCount > 0) {
+                countBadge.textContent = unreadCount;
+                countBadge.style.display = 'inline-flex';
+                markAllBtn.style.display = 'inline-block';
+            } else {
+                countBadge.style.display = 'none';
+                markAllBtn.style.display = 'none';
+            }
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="empty-message">메시지/메모가 없습니다.</div>';
+                return;
+            }
+            
+            let html = '';
+            messages.forEach(message => {
+                const readStatus = message.isRead ? '읽음' : '미읽음';
+                const readClass = message.isRead ? 'read' : 'unread';
+                const typeText = message.missionText || '메시지';
+                
+                html += `
+                    <div class="message-item ${readClass}" data-message-id="${message.id}">
+                        <div class="message-header">
+                            <span class="message-type">[${typeText}]</span>
+                            <span class="message-date">${message.timestamp.toLocaleString('ko-KR')}</span>
+                            <span class="message-status ${readClass}">${readStatus}</span>
+                        </div>
+                        <div class="message-content">${message.content}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        async function markMessageAsRead(messageId) {
+            try {
+                const { doc, updateDoc } = window.firebaseFunctions;
+                const messageRef = doc(window.firebaseDb, 'studentMemos', messageId);
+                
+                await updateDoc(messageRef, {
+                    isRead: true,
+                    readAt: new Date()
+                });
+                
+                // UI 업데이트
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    messageElement.classList.remove('unread');
+                    messageElement.classList.add('read');
+                    messageElement.querySelector('.message-status').textContent = '읽음';
+                    messageElement.querySelector('.message-status').className = 'message-status read';
+                }
+                
+                // 카운트 업데이트
+                updateUnreadMessageCount();
+                
+                // 학생의 unreadMemos 카운트 감소
+                if (currentViewingStudent) {
+                    try {
+                        const unreadCount = document.querySelectorAll('.message-item.unread').length;
+                        const isGroup = currentViewingStudent.isGroup;
+                        const collectionName = isGroup ? 'groups' : 'students';
+                        const studentDocRef = doc(window.firebaseDb, 'classData', currentClassId, collectionName, currentViewingStudent.id.toString());
+                        
+                        await updateDoc(studentDocRef, {
+                            unreadMemos: unreadCount
+                        });
+                    } catch (updateError) {
+                        console.log('unreadMemos 업데이트 실패:', updateError);
+                    }
+                }
+                
+                // UI만 업데이트 (loadDashboardData 제거)
+                
+            } catch (error) {
+                console.error('메시지 읽음 처리 실패:', error);
+                alert('메시지 읽음 처리에 실패했습니다.');
+            }
+        }
+        
+        function updateUnreadMessageCount() {
+            const unreadMessages = document.querySelectorAll('.message-item.unread');
+            const countBadge = document.getElementById('unreadMessageCount');
+            const markAllBtn = document.getElementById('markAllReadBtn');
+            const unreadCount = unreadMessages.length;
+            
+            if (unreadCount > 0) {
+                countBadge.textContent = unreadCount;
+                countBadge.style.display = 'inline-flex';
+                markAllBtn.style.display = 'inline-block';
+            } else {
+                countBadge.style.display = 'none';
+                markAllBtn.style.display = 'none';
+            }
+        }
+        
+        async function markAllMessagesAsRead() {
+            if (!currentViewingStudent) return;
+            
+            const unreadMessages = document.querySelectorAll('.message-item.unread');
+            const confirmMessage = `미읽음 메시지 ${unreadMessages.length}개를 모두 읽음 처리하시겠습니까?`;
+            
+            if (!confirm(confirmMessage)) return;
+            
+            try {
+                const { doc, updateDoc } = window.firebaseFunctions;
+                const promises = [];
+                
+                // 모든 미읽음 메시지를 읽음으로 처리
+                unreadMessages.forEach(messageElement => {
+                    const messageId = messageElement.getAttribute('data-message-id');
+                    const messageRef = doc(window.firebaseDb, 'studentMemos', messageId);
+                    
+                    promises.push(updateDoc(messageRef, {
+                        isRead: true,
+                        readAt: new Date()
+                    }));
+                });
+                
+                // 모든 업데이트 실행
+                await Promise.all(promises);
+                
+                // 학생의 unreadMemos 카운트를 0으로 업데이트
+                try {
+                    const isGroup = currentViewingStudent.isGroup;
+                    const collectionName = isGroup ? 'groups' : 'students';
+                    const studentDocRef = doc(window.firebaseDb, 'classData', currentClassId, collectionName, currentViewingStudent.id.toString());
+                    
+                    await updateDoc(studentDocRef, {
+                        unreadMemos: 0
+                    });
+                } catch (updateError) {
+                    console.log('unreadMemos 업데이트 실패 (문서가 없을 수 있음):', updateError);
+                }
+                
+                // UI 업데이트
+                unreadMessages.forEach(messageElement => {
+                    messageElement.classList.remove('unread');
+                    messageElement.classList.add('read');
+                    messageElement.querySelector('.message-status').textContent = '읽음';
+                    messageElement.querySelector('.message-status').className = 'message-status read';
+                });
+                
+                // 카운트 및 버튼 업데이트
+                updateUnreadMessageCount();
+                
+                // 직접 배지 제거 (즉시 UI 업데이트)
+                const studentCard = document.getElementById(`student-${currentViewingStudent.id}`) || 
+                                  document.getElementById(`group-${currentViewingStudent.id}`);
+                if (studentCard) {
+                    const badge = studentCard.querySelector('.memo-badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+                
+                alert('모든 메시지가 읽음 처리되었습니다.');
+                
+            } catch (error) {
+                console.error('일괄 읽음 처리 실패:', error);
+                alert('일괄 읽음 처리에 실패했습니다.');
+            }
+        }
+        
+        async function loadStudentMemos(studentId, isGroup = false) {
+            try {
+                const { collection, query, where, getDocs } = window.firebaseFunctions;
+                const studentMemosRef = collection(window.firebaseDb, 'studentMemos');
+                
+                const memosQuery = query(
+                    studentMemosRef,
+                    where('classId', '==', currentClassId),
+                    where('studentId', '==', studentId.toString())
+                );
+                
+                const querySnapshot = await getDocs(memosQuery);
+                const memos = [];
+                
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    memos.push({
+                        id: doc.id,
+                        missionId: data.missionId,
+                        missionText: data.missionText || '미션 제목 없음',
+                        content: data.content,
+                        timestamp: data.timestamp?.toDate() || new Date()
+                    });
+                });
+                
+                // 클라이언트 사이드에서 시간순으로 정렬 (최신순)
+                memos.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+                
+                displayStudentMemos(memos);
+                
+                // 읽지 않은 메모 수 초기화
+                if (memos.length > 0) {
+                    await resetUnreadMemos(studentId, isGroup);
+                }
+                
+            } catch (error) {
+                console.error('학생 메모 로드 오류:', error);
+                document.getElementById('studentMemosList').innerHTML = '<p>메모를 불러오는데 실패했습니다.</p>';
+            }
+        }
+        
+        function displayStudentMemos(memos) {
+            const container = document.getElementById('studentMemosList');
+            
+            if (memos.length === 0) {
+                container.innerHTML = '<p>작성된 메모가 없습니다.</p>';
+                return;
+            }
+            
+            const memosHtml = memos.map(memo => {
+                const dateStr = memo.timestamp.toLocaleDateString('ko-KR', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return `
+                    <div class="memo-item">
+                        <div class="memo-header">
+                            <span class="memo-mission">${memo.missionText}</span>
+                            <span class="memo-date">${dateStr}</span>
+                        </div>
+                        <div class="memo-content">${memo.content}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = memosHtml;
+        }
+        
+        async function resetUnreadMemos(studentId, isGroup = false) {
+            try {
+                const { doc, updateDoc } = window.firebaseFunctions;
+                const dataType = isGroup ? 'groups' : 'students';
+                const docRef = doc(window.firebaseDb, 'classData', currentClassId, dataType, studentId.toString());
+                
+                await updateDoc(docRef, {
+                    unreadMemos: 0
+                });
+                
+                // 대시보드 업데이트
+                loadDashboardData();
+                
+            } catch (error) {
+                console.error('읽지 않은 메모 수 초기화 오류:', error);
+            }
+        }
+    </script>
+
+    <!-- 미션 상세내용 입력 모달 -->
+    <div class="modal-overlay" id="missionDetailModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">미션 상세 내용</h3>
+                <button class="close-btn" onclick="closeMissionDetailModal()">&times;</button>
+            </div>
+            
+            <div class="modal-step">
+                <div class="form-group">
+                    <label class="form-label">미션 제목</label>
+                    <input type="text" class="form-input" id="missionDetailTitle" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">상세 설명</label>
+                    <textarea class="form-input" id="missionDetailContent" 
+                              placeholder="학생들이 볼 수 있는 자세한 설명을 입력하세요...&#10;예: 교과서 15~18페이지의 1~5번 문제를 풀고, 풀이과정을 노트에 자세히 적어주세요."
+                              rows="6"></textarea>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeMissionDetailModal()">취소</button>
+                <button class="btn btn-primary" onclick="saveMissionDetail()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 학생 상세 정보 모달 -->
+    <div class="modal-overlay" id="studentDetailModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">학생 상세 정보</h3>
+                <button class="close-btn" onclick="closeStudentDetailModal()">&times;</button>
+            </div>
+            
+            <div class="modal-step">
+                <div class="form-group">
+                    <label class="form-label" id="studentDetailLabel">학생 정보</label>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">학생 메시지/메모 <span id="unreadMessageCount" class="memo-badge" style="position: relative; top: -2px; margin-left: 8px; display: none;">0</span></label>
+                    <div id="studentMessagesList" class="memos-container">
+                        <p>로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="markAllReadBtn" onclick="markAllMessagesAsRead()" style="display: none;">읽음</button>
+                <button class="btn btn-secondary" onclick="closeStudentDetailModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
