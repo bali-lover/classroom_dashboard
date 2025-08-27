@@ -1927,7 +1927,7 @@
         let currentClassData = null; // 현재 클래스의 모드와 개수 정보 저장
         let currentModalStep = 1;
         let currentTab = 'individual';
-        const BASE_URL = window.location.origin + window.location.pathname.replace('dashboard.html', '');
+        const BASE_URL = window.location.origin + window.location.pathname.replace('/dashboard', '/') + 'classroom_dashboard/';
         let missions = {};
         let lastUpdateTime = null;
         let isVisible = true;
@@ -2060,7 +2060,7 @@
             
             // 현재 활성 클래스 ID를 URL에 포함
             const activeClassId = getCurrentClassId();
-            let url = BASE_URL + `student.html`;
+            let url = BASE_URL + `student`;
             if (activeClassId) {
                 url += `?classId=${activeClassId}`;
             }
