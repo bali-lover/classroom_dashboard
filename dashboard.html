@@ -632,10 +632,15 @@
             color: #166534;
         }
 
-        .class-item-delete {
+        .class-item-actions {
             position: absolute;
             top: 10px;
             right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .class-item-copy, .class-item-delete {
             background: #fee2e2;
             color: #dc2626;
             border: none;
@@ -649,6 +654,17 @@
             justify-content: center;
             opacity: 0.7;
             transition: all 0.2s ease;
+        }
+
+        .class-item-copy {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .class-item-copy:hover {
+            background: #bfdbfe;
+            opacity: 1;
+            transform: scale(1.1);
         }
 
         .class-item-delete:hover {
@@ -3011,7 +3027,10 @@
                     </div>
                     <div class="class-item-date">${formatDate(session.date)}</div>
                 </div>
-                <button class="class-item-delete" onclick="event.stopPropagation(); deleteClassConfirm('${session.classId}', '${session.className || '제목 없는 수업'}')">🗑️</button>
+                <div class="class-item-actions">
+                    <button class="class-item-copy" onclick="event.stopPropagation(); copyClass('${session.classId}', '${session.className || '제목 없는 수업'}')" title="복사하여 새 수업 만들기">📋</button>
+                    <button class="class-item-delete" onclick="event.stopPropagation(); deleteClassConfirm('${session.classId}', '${session.className || '제목 없는 수업'}')" title="삭제">🗑️</button>
+                </div>
             `;
             
             div.addEventListener('click', function() {
@@ -3171,6 +3190,79 @@
                     deleteButton.innerHTML = '🗑️';
                     deleteButton.style.opacity = '0.7';
                 }
+            }
+        }
+
+        // 수업 복사 함수
+        async function copyClass(originalClassId, originalClassName) {
+            const newClassName = prompt(`"${originalClassName}"을 복사합니다.\n새 수업 이름을 입력하세요:`, originalClassName + ' (복사본)');
+            
+            if (!newClassName || newClassName.trim() === '') {
+                return;
+            }
+            
+            try {
+                console.log('수업 복사 시작:', originalClassId);
+                
+                // 원본 수업의 전체 정보 가져오기 (모드, 개수, 미션 포함)
+                const activeSessionsResult = await window.classProgressFunctions.getActiveSessions();
+                if (!activeSessionsResult.success) {
+                    alert('수업 목록을 불러올 수 없습니다.');
+                    return;
+                }
+                
+                // 원본 수업 찾기
+                const originalSession = activeSessionsResult.sessions.find(session => session.classId === originalClassId);
+                if (!originalSession) {
+                    alert('원본 수업 정보를 찾을 수 없습니다.');
+                    return;
+                }
+                
+                // 원본 수업의 미션 데이터 가져오기
+                const missionsResult = await window.classProgressFunctions.getMissions(originalClassId);
+                if (!missionsResult.success) {
+                    alert('원본 수업의 미션 데이터를 불러올 수 없습니다.');
+                    return;
+                }
+                
+                // 새 수업 생성 (원본 수업의 모드와 개수 사용)
+                const newClassData = {
+                    title: newClassName.trim(),
+                    mode: originalSession.mode || 'individual',
+                    count: originalSession.count || 35
+                };
+                
+                console.log('복사할 수업 설정:', newClassData);
+                
+                const createResult = await window.classProgressFunctions.createNewClass(newClassData);
+                if (!createResult.success) {
+                    alert('새 수업 생성에 실패했습니다: ' + createResult.error);
+                    return;
+                }
+                
+                const newClassId = createResult.classId;
+                console.log('새 수업 생성 완료:', newClassId);
+                
+                // 미션 데이터 복사
+                if (missionsResult.data.missions && Object.keys(missionsResult.data.missions).length > 0) {
+                    const copyResult = await window.classProgressFunctions.saveMissions(newClassId, missionsResult.data.missions);
+                    if (!copyResult.success) {
+                        console.warn('미션 복사 실패:', copyResult.error);
+                    } else {
+                        console.log('미션 복사 완료');
+                    }
+                }
+                
+                alert(`새 수업 "${newClassName}"이 성공적으로 생성되었습니다!\n클래스 ID: ${newClassId}`);
+                
+                // 수업 목록 새로고침
+                await loadActiveClasses();
+                
+                closeModal('loadClassModal');
+                
+            } catch (error) {
+                console.error('수업 복사 오류:', error);
+                alert('수업 복사 중 오류가 발생했습니다.');
             }
         }
         
