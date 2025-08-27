@@ -1809,7 +1809,7 @@
                 classId: data.classId, 
                 className: data.title,
                 mode: data.mode,
-                count: data.count || 35,
+                count: data.count || (data.mode === 'team' ? 8 : 35),
                 date: data.createdAt,
                 status: data.status || 'active'
               });
@@ -3229,7 +3229,7 @@
                 const newClassData = {
                     title: newClassName.trim(),
                     mode: originalSession.mode || 'individual',
-                    count: originalSession.count || 35
+                    count: originalSession.count || (originalSession.mode === 'team' ? 8 : 35)
                 };
                 
                 console.log('복사할 수업 설정:', newClassData);
