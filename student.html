@@ -1200,6 +1200,7 @@
         }
 
         let groupCount = 8; // 기본 조 개수
+        let individualCount = 35; // 기본 학생 수
         
         async function loadClassMode() {
             try {
@@ -1211,10 +1212,15 @@
                     classMode = result.data.mode;
                     console.log('클래스 모드 로드됨:', classMode);
                     
-                    // 조별 모드인 경우 조 개수도 가져오기
-                    if (result.data.count && classMode === 'group') {
-                        groupCount = parseInt(result.data.count);
-                        console.log('조 개수 로드됨:', groupCount);
+                    // 모드별 개수 가져오기
+                    if (result.data.count) {
+                        if (classMode === 'group') {
+                            groupCount = parseInt(result.data.count);
+                            console.log('조 개수 로드됨:', groupCount);
+                        } else {
+                            individualCount = parseInt(result.data.count);
+                            console.log('학생 수 로드됨:', individualCount);
+                        }
                     }
                     
                     // 모드에 따라 모달 업데이트
@@ -1248,13 +1254,13 @@
                 // 개별 모드 (기본값)
                 modalDescription.textContent = '번호를 선택해주세요.';
                 
-                // 개별 모드 드롭다운 옵션 복원
+                // 개별 모드 드롭다운 옵션 동적 생성
                 let individualOptions = '<option value="">번호를 선택하세요</option>';
-                for(let i = 1; i <= 35; i++) {
+                for(let i = 1; i <= individualCount; i++) {
                     individualOptions += `<option value="${i}">${i}</option>`;
                 }
                 studentIdInput.innerHTML = individualOptions;
-                console.log('개별 모드로 드롭다운 업데이트 완료');
+                console.log(`개별 모드로 드롭다운 업데이트 완료 (${individualCount}명)`);
             }
         }
 
